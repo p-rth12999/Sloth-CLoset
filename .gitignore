@@ -1,0 +1,32 @@
+# --- Python & Virtual Environments ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+
+# --- Environment & Secret Keys ---
+.env
+.env.local
+
+# --- Local Databases & Backups ---
+*.db
+*.sqlite3
+wardrobe_local.json
+
+# --- Local Asset Folders ---
+wardrobe_images/
+
+# --- IDE & Editor Settings ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Operating System Junk ---
+.DS_Store
+Thumbs.db
+ehthumbs.db

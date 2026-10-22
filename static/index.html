@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlothCloset | Local AI Weekly Outfit Planner</title>
+  <script src="//cdn.tailwindcss.com"></script>
+  <script defer src="//cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body { background-color: #0b0d12; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .glass-card { background: rgba(20, 24, 33, 0.92); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(12px); }
+    .studio-tile {
+      background: radial-gradient(circle at center, #222736 0%, #14171f 75%);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.2s ease;
+    }
+    .studio-tile:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+      transform: translateY(-2px);
+    }
+    .banned-tile {
+      background: radial-gradient(circle at center, #2b1419 0%, #140c0f 80%);
+      border: 1px solid rgba(244, 63, 94, 0.45);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-16" x-data="slothApp()" x-init="init()">
+
+  <!-- Top Navbar -->
+  <header class="border-b border-slate-800/80 bg-slate-950/90 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🦥</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-fuchsia-300 to-amber-300 bg-clip-text text-transparent">
+              SlothCloset Studio
+            </h1>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              🔒 100% Local Wardrobe Privacy
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Weekly Smart Rotation • Wash-Cycle Cooldown • Gemma 2 + MongoDB Atlas</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button @click="seedCloset()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          🌱 Seed 11-Item Closet
+        </button>
+        <button @click="showAddModal = true" class="px-4 py-2 text-xs font-bold rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 transition">
+          + Upload Clothing Asset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 mt-8 space-y-10">
+
+    <!-- WEEKLY PLANNER CONTROLS + STYLE ARCHETYPES -->
+    <section class="glass-card rounded-2xl p-6 shadow-xl space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-violet-400">🗓️ 1. Weekly Outfit Rotation & Wash Cooldown</h2>
+          <p class="text-xs text-slate-400">
+            Watches & Shoes are reused daily • Clothes automatically enter a 1–2 day wash/dry cooldown before re-entering rotation.
+          </p>
+        </div>
+
+        <!-- 3-7 Days Selector & Wash Cooldown -->
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700">
+            <span class="text-xs font-semibold text-slate-300">📅 Plan Days:</span>
+            <select x-model="numDays" @change="draftDecks()" class="bg-slate-950 text-violet-300 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700">
+              <option value="3">3 Days</option>
+              <option value="4">4 Days</option>
+              <option value="5">5 Days (College Week)</option>
+              <option value="6">6 Days</option>
+              <option value="7">7 Days (Full Week)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700">
+            <span class="text-xs font-semibold text-slate-300">🧺 Wash Cooldown:</span>
+            <select x-model="washCooldown" @change="draftDecks()" class="bg-slate-950 text-emerald-300 font-bold text-xs rounded-lg px-2.5 py-1 border border-slate-700">
+              <option value="1">1 Day Rest</option>
+              <option value="2">2 Days Wash/Dry</option>
+              <option value="3">3 Days Wash/Dry</option>
+            </select>
+          </div>
+
+          <button @click="draftDecks()"
+            class="px-5 py-2.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/30 transition">
+            ⚡ Generate Weekly Rotation
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Style Vibe Presets -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <template x-for="(info, key) in archetypes" :key="key">
+          <button @click="selectedArchetype = key; draftDecks()"
+            class="text-left p-3.5 rounded-xl border transition"
+            :class="selectedArchetype === key ? 'border-violet-500 bg-violet-600/15 shadow-lg shadow-violet-500/10' : 'border-slate-800 bg-slate-900/70 hover:border-slate-700'">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-violet-300" x-text="info.badge"></span>
+              <span x-show="selectedArchetype === key" class="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-600 text-white">ACTIVE</span>
+            </div>
+            <div class="font-bold text-sm text-white mt-1" x-text="info.name"></div>
+            <p class="text-[11px] text-slate-400 mt-1 line-clamp-2" x-text="info.desc"></p>
+          </button>
+        </template>
+      </div>
+    </section>
+
+    <!-- GENERATED WEEKLY OUTFITS -->
+    <template x-if="draftResult">
+      <section class="space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-extrabold text-white">
+              ✨ Your <span x-text="draftResult.decks.length"></span>-Day Outfit Lineup
+            </h2>
+            <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+              x-text="'⚡ Solved in ' + draftResult.compute_time_ms + ' ms'"></span>
+          </div>
+          <span class="text-xs text-slate-400">Shoes & Watches auto-reuse • Tops respect your <span x-text="washCooldown"></span>-day wash cooldown</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <template x-for="(deck, dIdx) in draftResult.decks" :key="deck.day_number">
+            <div class="glass-card rounded-2xl p-5 border border-slate-800 hover:border-violet-500/40 transition flex flex-col justify-between space-y-4">
+              
+              <div>
+                <!-- Day Header -->
+                <div class="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div>
+                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-violet-400" x-text="deck.day_label"></span>
+                    <h3 class="text-lg font-extrabold text-white" x-text="deck.outfit_name"></h3>
+                    <p class="text-xs text-slate-400" x-text="deck.harmony_summary"></p>
+                  </div>
+                  <div class="bg-slate-900 border border-violet-500/30 rounded-xl px-3.5 py-2 text-center shrink-0">
+                    <div class="text-[10px] text-slate-400 uppercase">Harmony</div>
+                    <div class="text-xl font-black text-violet-400" x-text="deck.synergy_score + '%'"></div>
+                  </div>
+                </div>
+
+                <!-- Reuse / Post-Wash Status Pills -->
+                <template x-if="deck.reuse_badges && deck.reuse_badges.length">
+                  <div class="flex flex-wrap gap-1.5 mt-3">
+                    <template x-for="b in deck.reuse_badges">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-900 text-amber-300 border border-amber-500/25" x-text="b"></span>
+                    </template>
+                  </div>
+                </template>
+
+                <!-- Equipped Assets Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                  <template x-for="card in deck.cards" :key="card.id">
+                    <div class="studio-tile p-2.5 flex flex-col justify-between">
+                      <div class="h-28 flex items-center justify-center relative p-1">
+                        <img :src="card.image_url" class="max-h-full max-w-full object-contain drop-shadow-xl" />
+                        <span class="absolute top-0 left-0 px-1.5 py-0.5 rounded text-[9px] font-bold bg-black/70 text-slate-200" x-text="card.category"></span>
+                      </div>
+                      <div class="mt-2 pt-1.5 border-t border-white/5">
+                        <div class="text-xs font-bold text-white truncate" x-text="card.name"></div>
+                        <div class="flex items-center justify-between mt-1">
+                          <div class="flex -space-x-1">
+                            <template x-for="hc in (card.hex_colors || [card.hex_color])">
+                              <span class="w-3 h-3 rounded-full border border-slate-900" :style="`background:${hc}`"></span>
+                            </template>
+                          </div>
+                          <button @click="toggleBan(card.id, true)" title="Skip this item & re-plan"
+                            class="text-[10px] text-rose-400 hover:underline">🚫 Skip</button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Color Palette Swatches -->
+                <div class="mt-4 bg-slate-900/70 rounded-xl p-3 border border-slate-800/90">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-[11px] font-bold uppercase text-slate-400">🎨 Outfit Palette:</span>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <template x-for="sw in deck.color_palette" :key="sw.hex">
+                        <div class="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                          <span class="w-3 h-3 rounded-full" :style="`background:${sw.hex}`"></span>
+                          <span class="text-[10px] font-mono text-slate-300" x-text="sw.hex"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Optional Gemma 2 AI Stylist + SerpApi Recommendation -->
+              <div class="pt-2 border-t border-slate-800/80">
+                <template x-if="!deck.gemma_analysis">
+                  <button @click="analyzeDeckWithGemma(dIdx)" :disabled="deck.loadingGemma"
+                    class="w-full py-2 rounded-xl bg-slate-900 hover:bg-violet-950/50 border border-violet-500/30 text-xs font-bold text-violet-300 transition">
+                    <span x-show="!deck.loadingGemma">🧠 Ask Gemma 2 Stylist & Find Missing Piece (SerpApi)</span>
+                    <span x-show="deck.loadingGemma" class="animate-pulse">⚡ Gemma 2 Analyzing Outfit...</span>
+                  </button>
+                </template>
+
+                <template x-if="deck.gemma_analysis">
+                  <div class="bg-violet-950/25 border border-violet-500/40 rounded-xl p-3.5 space-y-3">
+                    <p class="text-xs text-slate-200"><strong class="text-violet-300">🧠 Gemma Verdict:</strong> <span x-text="deck.gemma_analysis.battle_strategy"></span></p>
+                    <div class="flex items-center gap-3 bg-slate-950/90 p-2.5 rounded-xl border border-slate-800">
+                      <img :src="deck.gemma_analysis.unlock_card.image_url" class="w-14 h-14 object-contain rounded-lg bg-slate-900 p-1 shrink-0" />
+                      <div class="flex-1 min-w-0">
+                        <div class="text-[10px] font-bold uppercase text-amber-400">🔓 Recommended Wardrobe Upgrade (SerpApi)</div>
+                        <div class="text-xs font-bold text-white truncate" x-text="deck.gemma_analysis.unlock_card.item_name"></div>
+                        <div class="text-[11px] text-slate-400 truncate" x-text="deck.gemma_analysis.unlock_card.reason"></div>
+                      </div>
+                      <a :href="deck.gemma_analysis.unlock_card.shop_link" target="_blank"
+                        class="px-2.5 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-bold shrink-0">View ↗</a>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </section>
+    </template>
+
+    <!-- FULL WARDROBE INVENTORY -->
+    <section class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-white">🧥 Your Closet Assets — Laundry & Skip List</h2>
+          <p class="text-xs text-slate-400">
+            Mark items <span class="text-rose-400 font-semibold">🚫 Skip Today</span> if you don't feel like wearing them, or <span class="text-amber-400 font-semibold">🌊 In Laundry</span> if they are currently wet.
+          </p>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <span class="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400" x-text="items.filter(i => i.is_clean && !i.is_banned).length + ' Available'"></span>
+          <span class="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400" x-text="items.filter(i => i.is_banned).length + ' Skipped'"></span>
+          <span class="px-2.5 py-1 rounded bg-amber-500/10 text-amber-400" x-text="items.filter(i => !i.is_clean).length + ' In Laundry'"></span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <template x-for="item in items" :key="item.id">
+          <div class="p-3.5 flex flex-col justify-between relative group"
+            :class="[
+              item.is_banned ? 'banned-tile rounded-[20px]' : 'studio-tile',
+              !item.is_clean ? 'opacity-45 grayscale' : ''
+            ]">
+            
+            <div class="flex items-center justify-between z-10">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                :class="item.is_banned ? 'bg-rose-600 text-white' : (item.is_clean ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300')"
+                x-text="item.is_banned ? '🚫 SKIPPED' : (item.is_clean ? '● Ready' : '🌊 Laundry')"></span>
+              <button @click="deleteItem(item.id)" class="w-6 h-6 rounded-full bg-black/50 hover:bg-rose-600 text-xs text-slate-300 hover:text-white transition">✕</button>
+            </div>
+
+            <div class="h-36 my-2 flex items-center justify-center p-2">
+              <img :src="item.image_url" class="max-h-full max-w-full object-contain drop-shadow-2xl" />
+            </div>
+
+            <div class="pt-2.5 border-t border-white/5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold" x-text="item.category"></span>
+                <div class="flex items-center gap-1">
+                  <template x-for="hc in (item.hex_colors || [item.hex_color])">
+                    <span class="w-3 h-3 rounded-full border border-white/20" :style="`background:${hc}`"></span>
+                  </template>
+                </div>
+              </div>
+
+              <h3 class="font-bold text-xs text-white truncate" x-text="item.name"></h3>
+
+              <div class="grid grid-cols-2 gap-1.5 pt-1">
+                <button @click="toggleClean(item.id)"
+                  class="py-1.5 rounded-lg text-[11px] font-semibold border border-slate-700/80 bg-slate-900/90 hover:bg-slate-800 text-slate-200 transition"
+                  x-text="item.is_clean ? '🧺 Wash' : '✨ Dry'"></button>
+
+                <button @click="toggleBan(item.id, true)"
+                  class="py-1.5 rounded-lg text-[11px] font-semibold border transition"
+                  :class="item.is_banned ? 'border-emerald-500/50 bg-emerald-950/60 text-emerald-300' : 'border-rose-500/40 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300'"
+                  x-text="item.is_banned ? '✓ Include' : '🚫 Skip'"></button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- UPLOAD / STUDIO ASSET MODAL -->
+  <div x-show="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" style="display: none;">
+    <div @click.away="showAddModal = false" class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-700 max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">📸 Add Multi-Color Wardrobe Asset</h3>
+        <button @click="showAddModal = false" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <form @submit.prevent="addItem" class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 font-semibold">Item Name</label>
+          <input type="text" x-model="newItem.name" required placeholder="e.g., Black White Mango Yellow Jacket or Casio Watch"
+            class="w-full mt-1 rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2 text-sm text-white" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400 font-semibold">Category (Watches = Accessory)</label>
+            <select x-model="newItem.category" class="w-full mt-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white">
+              <option>Top</option>
+              <option>Layer</option>
+              <option>Bottom</option>
+              <option>Footwear</option>
+              <option>Accessory</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-semibold">Style Vibe</label>
+            <input type="text" x-model="newItem.style_vibe" placeholder="Streetwear / Everything"
+              class="w-full mt-1 rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" />
+          </div>
+        </div>
+
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-slate-300 font-bold">🎨 Multi-Color Swatches</label>
+            <button type="button" @click="if(newItem.hex_colors.length < 4) newItem.hex_colors.push('#ffffff')"
+              class="text-xs font-semibold text-violet-400">+ Add Color</button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="(hc, idx) in newItem.hex_colors" :key="idx">
+              <div class="flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-lg border border-slate-700">
+                <input type="color" x-model="newItem.hex_colors[idx]" class="w-6 h-6 bg-transparent border-0 cursor-pointer" />
+                <span class="text-xs font-mono" x-text="newItem.hex_colors[idx]"></span>
+              </div>
+            </template>
+          </div>
+          <input type="text" x-model="newItem.color" required placeholder="Color names (e.g., Black / White / Mango Yellow)"
+            class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-1.5 text-xs text-white" />
+        </div>
+
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button type="button" @click="newItem.asset_mode = 'serpapi_twin'"
+              class="p-2 rounded-xl border text-left"
+              :class="newItem.asset_mode === 'serpapi_twin' ? 'border-violet-500 bg-violet-600/20 text-white' : 'border-slate-800 bg-slate-950 text-slate-400'">
+              🛍️ <b>SerpApi Studio Twin</b> (Clean catalog asset)
+            </button>
+            <button type="button" @click="newItem.asset_mode = 'cutout'"
+              class="p-2 rounded-xl border text-left"
+              :class="newItem.asset_mode === 'cutout' ? 'border-violet-500 bg-violet-600/20 text-white' : 'border-slate-800 bg-slate-950 text-slate-400'">
+              ✂️ <b>Local AI Cutout</b> (rembg + color extract)
+            </button>
+          </div>
+          <input type="file" id="photoInput" accept="image/*" @change="previewPhoto($event)"
+            class="w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white" />
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 font-bold text-sm text-white">
+          💾 Save Asset to Closet
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function slothApp() {
+      return {
+        items: [],
+        archetypes: {},
+        selectedArchetype: 'balanced',
+        numDays: 5,
+        washCooldown: 2,
+        draftResult: null,
+        showAddModal: false,
+        newItem: {
+          name: '',
+          category: 'Top',
+          color: '',
+          hex_colors: ['#181A1F', '#EAB308', '#F5F5F5'],
+          style_vibe: 'Streetwear / Everything',
+          asset_mode: 'serpapi_twin'
+        },
+
+        async init() {
+          await this.fetchInventory();
+          if (this.items.length >= 2) {
+            await this.draftDecks();
+          }
+        },
+        async fetchInventory() {
+          const res = await fetch('/api/inventory');
+          if (res.ok) {
+            const data = await res.json();
+            this.items = data.items;
+            this.archetypes = data.archetypes;
+          }
+        },
+        async seedCloset() {
+          await fetch('/api/seed', { method: 'POST' });
+          await this.fetchInventory();
+          await this.draftDecks();
+        },
+        async draftDecks() {
+          const res = await fetch('/api/plan-weekly-outfits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              archetype: this.selectedArchetype,
+              num_days: Number(this.numDays),
+              wash_cooldown: Number(this.washCooldown)
+            })
+          });
+          if (res.ok) {
+            this.draftResult = await res.json();
+          }
+        },
+        async toggleClean(id) {
+          await fetch(`/api/inventory/toggle-clean/${id}`, { method: 'POST' });
+          await this.fetchInventory();
+          await this.draftDecks();
+        },
+        async toggleBan(id, autoRedraft = true) {
+          await fetch(`/api/inventory/toggle-ban/${id}`, { method: 'POST' });
+          await this.fetchInventory();
+          if (autoRedraft) await this.draftDecks();
+        },
+        async deleteItem(id) {
+          await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+          await this.fetchInventory();
+          await this.draftDecks();
+        },
+        async analyzeDeckWithGemma(deckIdx) {
+          const targetDeck = this.draftResult.decks[deckIdx];
+          targetDeck.loadingGemma = true;
+          try {
+            const res = await fetch('/api/analyze-deck', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cards: targetDeck.cards,
+                archetype: targetDeck.archetype
+              })
+            });
+            if (res.ok) {
+              targetDeck.gemma_analysis = await res.json();
+            }
+          } finally {
+            targetDeck.loadingGemma = false;
+          }
+        },
+        async previewPhoto(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append('photo', file);
+          const res = await fetch('/api/analyze-photo', { method: 'POST', body: fd });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.hex_colors) this.newItem.hex_colors = data.hex_colors;
+          }
+        },
+        async addItem() {
+          const fd = new FormData();
+          fd.append('name', this.newItem.name);
+          fd.append('category', this.newItem.category);
+          fd.append('color', this.newItem.color);
+          fd.append('hex_colors_json', JSON.stringify(this.newItem.hex_colors));
+          fd.append('style_vibe', this.newItem.style_vibe);
+          fd.append('asset_mode', this.newItem.asset_mode);
+          const fileInput = document.getElementById('photoInput');
+          if (fileInput && fileInput.files[0]) fd.append('photo', fileInput.files[0]);
+
+          await fetch('/api/inventory/add', { method: 'POST', body: fd });
+          this.showAddModal = false;
+          await this.fetchInventory();
+          await this.draftDecks();
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "base_score": 65,
+  "vibe_synergy": {
+    "same_vibe_bonus": 15,
+    "versatile_keywords": ["everything", "versatile", "daily", "clean", "classic"],
+    "versatile_bonus": 10
+  },
+  "color_families": {
+    "neutral_dark": ["#000000", "#181A1F", "#1A1A1A", "#1F2937", "#111827", "#27272A"],
+    "neutral_light": ["#FFFFFF", "#F5F5F5", "#F9FAFB", "#EAEAEA", "#F5F5F0", "#E5E7EB"],
+    "neutral_grey": ["#6B7280", "#9CA3AF", "#4B5563", "#374151"],
+    "earth": ["#556B2F", "#3B4A20", "#78350F", "#92400E", "#A16207", "#854D0E", "#D6D3D1"],
+    "warm_pop": ["#EAB308", "#E1AD01", "#FFB703", "#D90429", "#EF4444", "#F97316"],
+    "cool": ["#1B263B", "#2B4C7E", "#BFDBFE", "#3B82F6", "#1E3A8A", "#6366F1"]
+  },
+  "pairings": {
+    "neutral_dark+neutral_light": 22,
+    "neutral_dark+warm_pop": 25,
+    "neutral_dark+earth": 18,
+    "neutral_dark+cool": 16,
+    "neutral_dark+neutral_dark": 15,
+    "neutral_light+earth": 22,
+    "neutral_light+cool": 24,
+    "neutral_light+warm_pop": 18,
+    "earth+warm_pop": 24,
+    "earth+cool": 16,
+    "cool+warm_pop": 22,
+    "warm_pop+warm_pop": -25
+  },
+  "archetypes": {
+    "balanced": {
+      "name": "Standard Meta Draft",
+      "badge": "⚡ All-Rounder",
+      "desc": "Balanced multi-color harmony across your clean, unbanned wardrobe."
+    },
+    "monochrome": {
+      "name": "The Monochrome Beatdown",
+      "badge": "🖤 Dark/Light Core",
+      "desc": "Heavily boosts Black, White, Charcoal, and Grey pairings; penalizes loud saturation."
+    },
+    "earth": {
+      "name": "The Earth-Tone Cycle",
+      "badge": "🌿 Olive & Utility",
+      "desc": "Prioritizes Olive, Cargo, Khaki, Mustard, and grounded utility pieces."
+    },
+    "contrast": {
+      "name": "High-Contrast Aggro",
+      "badge": "🔥 Pop Win-Condition",
+      "desc": "Pairs statement pop colors (Mango Yellow, Crimson, Indigo) with grounded neutrals."
+    }
+  }
+}
